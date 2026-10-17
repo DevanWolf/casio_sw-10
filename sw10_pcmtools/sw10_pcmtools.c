@@ -1,6 +1,6 @@
 /**
  *
- *  Copyright (C) 2022-2025 Roman Pauer
+ *  Copyright (C) 2022-2026 Roman Pauer
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy of
  *  this software and associated documentation files (the "Software"), to deal in
@@ -104,9 +104,13 @@ enum ParameterType
 
 static const char *arg_input = NULL;
 static const char *arg_output = NULL;
+#if PCM_TOOL == PCM_CONVERT_DLL || PCM_TOOL == PCM_COMPARE_DLL_INTERNAL || PCM_TOOL == PCM_COMPARE_DLL_EXTERNAL
 static const char *arg_dll = "VLSG.DLL";
+#endif
 static const char *arg_rom = "ROMSXGM.BIN";
+#if PCM_TOOL == PCM_COMPARE_DLL_EXTERNAL
 static const char *arg_exttool = NULL;
+#endif
 static int wav_to_file = 1;
 
 #if PCM_TOOL == PCM_CONVERT_DLL || PCM_TOOL == PCM_COMPARE_DLL_INTERNAL || PCM_TOOL == PCM_COMPARE_DLL_EXTERNAL
@@ -236,14 +240,14 @@ static void *load_rom_file(const char *romname)
 #endif
     }
 
-    mem = malloc(2 * 1024 * 1024);
+    mem = malloc(2097152);
     if (mem == NULL)
     {
         fclose(f);
         return NULL;
     }
 
-    if (fread(mem, 1, 2 * 1024 * 1024, f) != 2 * 1024 * 1024)
+    if (fread(mem, 1, 2097152, f) != 2097152)
     {
         free(mem);
         fclose(f);
@@ -319,10 +323,10 @@ static void usage(const char *progname)
 #if PCM_TOOL == PCM_COMPARE_DLL_EXTERNAL
         "  -t PATH  External compare tool path\n"
 #endif
-        "  -r PATH  Rom path (path to ROMSXGM.BIN)\n"
-        "  -f NUM   Frequency (0 = 11025 Hz, 1 = 22050 Hz, 2 = 44100 Hz)\n"
-        "  -p NUM   Polyphony (0 = 24 voices, 1 = 32 voices, 2 = 48 voices, 3 = 64 voices)\n"
-        "  -e NUM   Reverb effect (0 = off, 1 = reverb 1, 2 = reverb 2)\n"
+        "  -r PATH  ROM path (path to ROMSXGM.BIN)\n"
+        "  -f NUM   Frequency (0 = 11025 Hz, 1 = 22050 Hz, 2 = 44100 Hz [default])\n"
+        "  -p NUM   Polyphony (0 = 24 voices, 1 = 32 voices, 2 = 48 voices, 3 = 64 voices [default])\n"
+        "  -e NUM   Reverb effect (0 = off [default], 1 = reverb 1, 2 = reverb 2)\n"
         "  -h       Help\n",
         basename,
         progname
@@ -360,6 +364,10 @@ int main(int argc, char *argv[])
                             arg_input = argv[i];
                         }
                         break;
+#if PCM_TOOL == PCM_CONVERT_DLL || PCM_TOOL == PCM_CONVERT_INTERNAL
+                    case 's': // stdout
+                        wav_to_file = 0;
+                        break;
                     case 'o': // output
                         if ((i + 1) < argc)
                         {
@@ -367,6 +375,8 @@ int main(int argc, char *argv[])
                             arg_output = argv[i];
                         }
                         break;
+#endif
+#if PCM_TOOL == PCM_CONVERT_DLL || PCM_TOOL == PCM_COMPARE_DLL_INTERNAL || PCM_TOOL == PCM_COMPARE_DLL_EXTERNAL
                     case 'd': // dll
                         if ((i + 1) < argc)
                         {
@@ -374,6 +384,7 @@ int main(int argc, char *argv[])
                             arg_dll = argv[i];
                         }
                         break;
+#endif
                     case 'r': // rom
                         if ((i + 1) < argc)
                         {
@@ -381,9 +392,7 @@ int main(int argc, char *argv[])
                             arg_rom = argv[i];
                         }
                         break;
-                    case 's': // stdout
-                        wav_to_file = 0;
-                        break;
+#if PCM_TOOL == PCM_COMPARE_DLL_EXTERNAL
                     case 't': // tool
                         if ((i + 1) < argc)
                         {
@@ -391,6 +400,7 @@ int main(int argc, char *argv[])
                             arg_exttool = argv[i];
                         }
                         break;
+#endif
                     case 'f': // frequency
                         if ((i + 1) < argc)
                         {
@@ -828,4 +838,3 @@ int main(int argc, char *argv[])
 
     return return_value;
 }
-

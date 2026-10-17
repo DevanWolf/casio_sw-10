@@ -1,6 +1,6 @@
 /**
  *
- *  Copyright (C) 2022-2025 Roman Pauer
+ *  Copyright (C) 2022-2026 Roman Pauer
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy of
  *  this software and associated documentation files (the "Software"), to deal in
@@ -50,7 +50,7 @@ typedef struct
     int16_t pitch_bend;
     int8_t pan;
     uint8_t chflags;
-    uint16_t pitch_bend_sense;
+    int16_t pitch_bend_sense;
     int16_t fine_tune;
     int8_t coarse_tune;
     uint8_t parameter_number_MSB;
@@ -73,8 +73,8 @@ typedef struct
     int32_t field_30;
     int32_t field_34;
     int32_t field_38;
-    int32_t note_number;
-    int16_t note_velocity;
+    uint8_t note_number;
+    uint8_t note_velocity;
     int16_t channel_num_2;
     int16_t field_44;
     uint16_t vflags;
@@ -141,7 +141,7 @@ static uint32_t event_type;
 static int32_t event_length;
 static int32_t reverb_data_buffer[32768];
 static uint32_t reverb_data_index;
-static int32_t is_reverb_enabled;
+static uint8_t is_reverb_enabled;
 static uint32_t reverb_shift;
 static volatile uint32_t midi_data_read_index;
 static uint8_t midi_data_buffer[65536];
@@ -151,13 +151,13 @@ static uint32_t rom_offset;
 static struc_6 stru_C0030080[MIDI_CHANNELS];
 static Channel_Data channel_data[MIDI_CHANNELS];
 static Voice_Data voice_data[MAX_VOICES];
-static uint32_t effect_type;
-static int32_t current_polyphony;
+static uint8_t effect_type;
+static uint8_t current_polyphony;
 static const uint8_t *romsxgm_ptr;
-static uint32_t output_frequency;
-static int32_t maximum_polyphony_new_value;
+static uint16_t output_frequency;
+static uint8_t maximum_polyphony_new_value;
 static uint32_t system_time_1;
-static int32_t maximum_polyphony;
+static uint8_t maximum_polyphony;
 static uint8_t *output_data_ptr;
 static uint32_t effect_param_value;
 
@@ -1329,6 +1329,9 @@ static void ControlChange(void)
             if (channel_data_ptr->parameter_number_MSB == 0)
             {
                 if (channel_data_ptr->parameter_number_LSB == 0) // Pitch bend range
+                    if (channel_data_ptr->data_entry_MSB >= 12)
+                        channel_data_ptr->pitch_bend_sense = 3072;
+                    else
                         channel_data_ptr->pitch_bend_sense = 2 * ((channel_data_ptr->data_entry_MSB << 7) + channel_data_ptr->data_entry_LSB);
                 else if (channel_data_ptr->parameter_number_LSB == 1) // Fine tuning
                     channel_data_ptr->fine_tune = ((channel_data_ptr->data_entry_LSB & 0x60) >> 5) + 4 * channel_data_ptr->data_entry_MSB - 256;
@@ -1350,7 +1353,7 @@ static void ControlChange(void)
             channel_data_ptr->data_entry_LSB = event_data[2];
             if (channel_data_ptr->parameter_number_MSB == 0)
             {
-                if (channel_data_ptr->parameter_number_LSB == 0) // Pitch bend range
+                if (channel_data_ptr->parameter_number_LSB == 0 && channel_data_ptr->data_entry_MSB < 12) // Pitch bend range
                         channel_data_ptr->pitch_bend_sense = 2 * ((channel_data_ptr->data_entry_MSB << 7) + channel_data_ptr->data_entry_LSB);
                 else if (channel_data_ptr->parameter_number_LSB == 1) // Fine tuning
                     channel_data_ptr->fine_tune = ((channel_data_ptr->data_entry_LSB & 0x60) >> 5) + 4 * channel_data_ptr->data_entry_MSB - 256;
